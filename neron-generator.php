@@ -1,0 +1,355 @@
+<?php
+/**
+ *  کلاسی برای تولید نرون و  نمایش آرمون  بصورت تنظیم پارامتر ها و نمایش نتیجه آموزش و آزمون شبکه عصبی بصورت رسم  نمودار جدول 
+ * وتوضیحات  و غیر هر چی لازمه
+ */
+
+class neron_generator {
+
+
+    public $nummberofnero=1;
+    public $learning_rate=0.5;
+    public $epoches=20000;
+    public $nn=['AND','OR','NOT','XOR'];
+
+    // آموزش 
+    public function  trainNetwork($H, $lr, $EPOCHS) {
+
+    }
+
+
+    //آزمون
+    public function predict($net, $x0, $x1) {
+
+    }
+
+
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+?>
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>مرز تصمیم‌گیری XOR</title>
+<style>
+  body { font-family: Tahoma, sans-serif; margin: 16px; background:#f7f9fb; color:#222; }
+  h2 { margin-top:0; font-size:18px; }
+  .controls { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:12px; font-size:14px; }
+  input[type=range] { vertical-align:middle; }
+  .val { font-weight:bold; color:#2b7a78; }
+  button { padding:7px 16px; border:none; border-radius:6px; background:#2b7a78; color:#fff; cursor:pointer; font-size:14px; }
+  button:disabled { background:#9bb; cursor:not-allowed; }
+  .canvasWrap { display:flex; gap:16px; flex-wrap:wrap; }
+  .panel { background:#fff; border-radius:8px; padding:10px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+  .panel h3 { margin:0 0 8px; font-size:14px; text-align:center; color:#444; }
+  canvas { display:block; border-radius:4px; }
+  .legend { font-size:12px; margin-top:8px; text-align:center; color:#555; }
+  .legend span { display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:middle; margin:0 4px; }
+  #results { margin-top:14px; font-size:13px; line-height:1.8; }
+  .ok { color:#1a7f37; font-weight:bold; }
+  .bad { color:#c0392b; font-weight:bold; }
+  code { background:#eef; padding:1px 5px; border-radius:3px; }
+</style>
+</head>
+<body>
+  <h2>مرز تصمیم‌گیری شبکه برای XOR</h2>
+
+  <div class="controls">
+    <label>نرون مخفی: <span class="val" id="hVal">2</span>
+      <input type="range" id="hidden" min="1" max="6" value="2">
+    </label>
+    <label>نرخ یادگیری: <span class="val" id="lrVal">0.5</span>
+      <input type="range" id="lr" min="0.05" max="2" step="0.05" value="0.5">
+    </label>
+    <label>دورها: <span class="val" id="epVal">20000</span>
+      <input type="range" id="epochs" min="1000" max="50000" step="1000" value="20000">
+    </label>
+    <button id="run">آموزش و رسم</button>
+  </div>
+
+  <div class="canvasWrap">
+    <div class="panel">
+      <h3>مرز تصمیم‌گیری (کل صفحه)</h3>
+      <canvas id="grid" width="360" height="360"></canvas>
+      <div class="legend">
+        <span style="background:#2b7a78"></span>خروجی ≈ 1
+        <span style="background:#e8a87c"></span>خروجی ≈ 0
+        <span style="background:#fff;border:1px solid #999"></span>مرز
+      </div>
+    </div>
+    <div class="panel">
+      <h3>چهار نقطه XOR</h3>
+      <canvas id="points" width="360" height="360"></canvas>
+      <div class="legend">
+        <span style="background:#1a7f37;border-radius:50%"></span>هدف 1
+        <span style="background:#c0392b;border-radius:50%"></span>هدف 0
+      </div>
+    </div>
+    <div class="panel">
+      <h3>نمایشگر </h3>
+      <!-- <canvas id="monitor" width="360" height="360"> -->
+        
+        <pre style="overflow:scroll;width:500px;">
+            === تشخیص خودکار نقش نرون‌های مخفی ===
+                نرون مخفی 0:
+                خروجی‌ها: [0.02, 0.97, 0.97, 0.98]
+                بیت‌ها:   [0, 1, 1, 1]
+                نقش:     OR
+
+                نرون مخفی 1:
+                خروجی‌ها: [0.01, 0.02, 0.02, 0.96]
+                بیت‌ها:   [0, 0, 0, 1]
+                نقش:     AND
+
+                === تشخیص نقش نرون خروجی ===
+                خروجی‌ها: [0.02, 0.96, 0.96, 0.03]
+                بیت‌ها:   [0, 1, 1, 0]
+                نقش:     XOR
+
+                === وزن‌های نرون خروجی ===
+                W2[0] (وزن از نرون مخفی 0) = 8.45
+                W2[1] (وزن از نرون مخفی 1) = -8.21
+                → وزن مثبت از نرون 0 و منفی از نرون 1: یعنی خروجی ≈ (نرون 0) AND NOT(نرون 1)
+        </pre>
+
+      <!-- </canvas> -->
+      <div class="legend">
+        <span style="background:#1a7f37;border-radius:0%"></span>پارامتر
+        <span style="background:#c0392b;border-radius:0%"></span>نقش نرون 
+      </div>
+    </div>
+  </div>
+
+  <div id="results">منتظر اجرا...</div>
+
+<script>
+const sigmoid = x => 1 / (1 + Math.exp(-x));
+const dsigmoid = o => o * (1 - o);
+const inputs  = [[0,0],[0,1],[1,0],[1,1]];
+const targets = [0,1,1,0];
+
+const $ = id => document.getElementById(id);
+const hiddenSlider = $('hidden'), lrSlider = $('lr'), epochsSlider = $('epochs');
+hiddenSlider.oninput = () => $('hVal').textContent = hiddenSlider.value;
+lrSlider.oninput     = () => $('lrVal').textContent  = lrSlider.value;
+epochsSlider.oninput = () => $('epVal').textContent  = epochsSlider.value;
+
+function rand() { return Math.random() * 2 - 1; }
+
+// آموزش (همون کد قبلی، ولی تابع جدا برای استفاده مجدد)
+function trainNetwork(H, lr, EPOCHS) {
+  let W1 = Array.from({length:H}, () => [rand(), rand()]);
+  let b1 = Array(H).fill(0);
+  let W2 = Array(H).fill(0).map(rand);
+  let b2 = 0;
+
+  for (let ep = 0; ep < EPOCHS; ep++) {
+    for (let n = 0; n < inputs.length; n++) {
+      const x = inputs[n], target = targets[n];
+      const hOut = new Array(H);
+      for (let h = 0; h < H; h++) {
+        let s = b1[h];
+        for (let i = 0; i < 2; i++) s += W1[h][i] * x[i];
+        hOut[h] = sigmoid(s);
+      }
+      let sOut = b2;
+      for (let h = 0; h < H; h++) sOut += W2[h] * hOut[h];
+      const out = sigmoid(sOut);
+      const err = target - out;
+      const dOut = err * dsigmoid(out);
+      const dH = new Array(H);
+      for (let h = 0; h < H; h++) dH[h] = dOut * W2[h] * dsigmoid(hOut[h]);
+      for (let h = 0; h < H; h++) {
+        W2[h] += lr * dOut * hOut[h];
+        for (let i = 0; i < 2; i++) W1[h][i] += lr * dH[h] * x[i];
+        b1[h] += lr * dH[h];
+      }
+      b2 += lr * dOut;
+    }
+  }
+  return {W1, b1, W2, b2, H};
+}
+
+function predict(net, x0, x1) {
+  const {W1, b1, W2, b2, H} = net;
+  const hOut = new Array(H);
+  for (let h = 0; h < H; h++) {
+    let s = b1[h];
+    s += W1[h][0]*x0 + W1[h][1]*x1;
+    hOut[h] = sigmoid(s);
+  }
+  let sOut = b2;
+  for (let h = 0; h < H; h++) sOut += W2[h] * hOut[h];
+  return sigmoid(sOut);
+}
+
+// رسم مرز تصمیم‌گیری روی گرید
+function drawGrid(net) {
+  const c = $('grid'), ctx = c.getContext('2d');
+  const W = c.width, Hh = c.height;
+  const img = ctx.createImageData(W, Hh);
+
+  for (let py = 0; py < Hh; py++) {
+    for (let px = 0; px < W; px++) {
+      // مختصات: x0 از چپ به راست، x1 از پایین به بالا (تصویر معکوس)
+      const x0 = px / (W - 1);
+      const x1 = 1 - py / (Hh - 1);
+      const out = predict(net, x0, x1);
+
+      // رنگ: آمیخته بین نارنجی (0) و سبزآبی (1)
+      const t = out; // 0..1
+      const r = Math.round(232 + (43 - 232) * t);
+      const g = Math.round(168 + (122 - 168) * t);
+      const b = Math.round(124 + (120 - 124) * t);
+
+      // خط مرز: وقتی خروجی نزدیک 0.5 باشه، خط تیره بکش
+      let isBorder = false;
+      // برای تشخیص مرز، از خروجی و همسایه استفاده می‌کنیم — ساده‌ش اینه که
+      // خروجی نزدیک 0.5 رو مرز بگیریم (ضخامت خط رو با آستانه تنظیم می‌کنیم)
+      if (Math.abs(out - 0.5) < 0.012) isBorder = true;
+
+      const idx = (py * W + px) * 4;
+      if (isBorder) {
+        img.data[idx] = 60; img.data[idx+1] = 60; img.data[idx+2] = 60; img.data[idx+3] = 255;
+      } else {
+        img.data[idx] = r; img.data[idx+1] = g; img.data[idx+2] = b; img.data[idx+3] = 255;
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+// رسم چهار نقطه XOR
+function drawPoints() {
+  const c = $('points'), ctx = c.getContext('2d');
+  const W = c.width, Hh = c.height;
+  ctx.clearRect(0, 0, W, Hh);
+  // پس‌زمینه شبکه‌ای ملایم
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, Hh);
+  ctx.strokeStyle = '#eee'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 10; i++) {
+    const t = i / 10;
+    ctx.beginPath(); ctx.moveTo(t*W, 0); ctx.lineTo(t*W, Hh); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, t*Hh); ctx.lineTo(W, t*Hh); ctx.stroke();
+  }
+  // محورها
+  ctx.strokeStyle = '#aaa';
+  ctx.beginPath(); ctx.moveTo(0, Hh); ctx.lineTo(W, Hh); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, Hh); ctx.stroke();
+
+  inputs.forEach((x, i) => {
+    const px = x[0] * (W - 20) + 10;
+    const py = (1 - x[1]) * (Hh - 20) + 10;
+    ctx.beginPath();
+    ctx.arc(px, py, 14, 0, Math.PI * 2);
+    ctx.fillStyle = targets[i] === 1 ? '#1a7f37' : '#c0392b';
+    ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px Tahoma';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(`${x[0]},${x[1]}`, px, py);
+  });
+}
+function monitor(){
+
+  const c = $('monitor'), ctx = c.getContext('2d');
+  const W = c.width, Hh = c.height;
+  ctx.clearRect(0, 0, W, Hh);
+  // پس‌زمینه شبکه‌ای ملایم
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, Hh);
+  ctx.strokeStyle = '#eee'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 20; i++) {
+    const t = i / 20;
+    ctx.beginPath(); ctx.moveTo(t*W, 0); ctx.lineTo(t*W, Hh); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, t*Hh); ctx.lineTo(W, t*Hh); ctx.stroke();
+  }
+  // محورها
+  ctx.strokeStyle = '#aaa';
+  ctx.beginPath(); ctx.moveTo(0, Hh); ctx.lineTo(W, Hh); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, Hh); ctx.stroke();
+    ctx.beginPath();
+
+    ctx.fillStyle =  '#c0392b';
+    ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px Tahoma';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('=== تشخیص خودکار نقش نرون‌های مخفی ===', 10, 20);
+
+
+
+}
+async function run() {
+  const H = +hiddenSlider.value;
+  const lr = +lrSlider.value;
+  const EPOCHS = +epochsSlider.value;
+
+  $('run').disabled = true;
+  $('results').textContent = 'در حال آموزش...';
+  await new Promise(r => setTimeout(r, 10));
+
+  const net = trainNetwork(H, lr, EPOCHS);
+  drawGrid(net);
+  drawPoints();
+  monitor();
+
+  // نتیجه‌ی نهایی
+  let html = `<b>نتیجه (نرون مخفی = ${H}):</b><br>`;
+  let allOk = true;
+  inputs.forEach((x, i) => {
+    const out = predict(net, x[0], x[1]);
+    const ok = Math.abs(out - targets[i]) < 0.3;
+    if (!ok) allOk = false;
+    html += `XOR(${x[0]},${x[1]}) = <code>${out.toFixed(4)}</code> ` +
+            (ok ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>') + '<br>';
+  });
+  html += allOk
+    ? '<br><span class="ok">✅ شبکه XOR را یاد گرفت — مرز غیرخطی است.</span>'
+    : '<br><span class="bad">❌ شبکه XOR را یاد نگرفت — مرز همچنان خطی است (یا فقط یک خط).</span>';
+  $('results').innerHTML = html;
+  $('run').disabled = false;
+}
+
+$('run').onclick = run;
+// اجرای خودکار در اولین بار
+run();
+</script>
+</body>
+</html>
