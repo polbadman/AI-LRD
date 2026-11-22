@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>شبیه‌ساز شبکه عصبی — گیت‌های منطقی و نیم‌جمع‌کننده</title>
+<style>
+  body { font-family: Tahoma, sans-serif; margin: 16px; background:#f7f9fb; color:#222; }
+  h2 { margin-top:0; font-size:18px; }
+  h3 { margin:0 0 8px; font-size:14px; text-align:center; color:#444; }
+  .controls { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:12px; font-size:14px; }
+  input[type=range] { vertical-align:middle; }
+  select { padding:4px 8px; border-radius:5px; border:1px solid #bbb; font-size:14px; }
+  .val { font-weight:bold; color:#2b7a78; }
+  button { padding:7px 16px; border:none; border-radius:6px; background:#2b7a78; color:#fff; cursor:pointer; font-size:14px; }
+  button:disabled { background:#9bb; cursor:not-allowed; }
+  button.secondary { background:#e8a87c; }
+  button.danger { background:#c0392b; }
+  button.help { background:#6c5ce7; }
+  .hint { font-size:12px; color:#666; margin-bottom:10px; padding:6px 10px; background:#fff8e1; border-radius:5px; border-right:3px solid #e8a87c; }
+  .canvasWrap { display:flex; gap:16px; flex-wrap:wrap; }
+  .panel { background:#fff; border-radius:8px; padding:10px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+  canvas { display:block; border-radius:4px; }
+  .legend { font-size:12px; margin-top:8px; text-align:center; color:#555; }
+  .legend span { display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:middle; margin:0 4px; }
+  #results { margin-top:14px; font-size:13px; line-height:1.8; }
+  .ok { color:#1a7f37; font-weight:bold; }
+  .bad { color:#c0392b; font-weight:bold; }
+  code { background:#eef; padding:1px 5px; border-radius:3px; }
+  #progressWrap { margin:10px 0; display:none; }
+  #progressBar { height:10px; background:#2b7a78; width:0%; border-radius:5px; transition:width .1s; }
+  #progressOuter { height:10px; background:#e0e6e6; border-radius:5px; overflow:hidden; }
+  table.roles { width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; background:#fff; }
+  table.roles th, table.roles td { border:1px solid #ddd; padding:6px 8px; text-align:center; }
+  table.roles th { background:#eef4f4; }
+  .roleCard { margin-top:8px; padding:8px; background:#fff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .roleCard h4 { margin:0 0 6px; font-size:13px; }
+  .neuronCanvas { display:block; margin:6px auto 0; }
+  #helpModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; justify-content:center; align-items:flex-start; padding:20px; overflow-y:auto; }
+  #helpModal.open { display:flex; }
+  .modalContent { background:#fff; border-radius:10px; max-width:760px; width:100%; padding:20px; box-shadow:0 4px 20px rgba(0,0,0,.3); position:relative; max-height:90vh; overflow-y:auto; line-height:1.8; }
+  .modalContent h2 { font-size:18px; margin-top:0; color:#2b7a78; }
+  .modalContent h3 { text-align:right; font-size:15px; color:#6c5ce7; margin-top:18px; margin-bottom:6px; }
+  .modalContent ul { margin:4px 0 8px; padding-right:20px; }
+  .modalContent li { margin-bottom:4px; }
+  .modalContent table { width:100%; border-collapse:collapse; font-size:13px; margin:8px 0; }
+  .modalContent table th, .modalContent table td { border:1px solid #ddd; padding:6px 8px; text-align:center; }
+  .modalContent table th { background:#eef4f4; }
+  .closeModal { position:absolute; top:10px; left:10px; background:#c0392b; padding:4px 10px; font-size:14px; }
+  .modalContent .note { background:#fff8e1; padding:8px 12px; border-radius:6px; border-right:3px solid #e8a87c; margin:8px 0; }
+  .helpPage { display:none; }
+  .helpPage.active { display:block; }
+  .helpMenuList { list-style:none; padding:0; margin:10px 0; }
+  .helpMenuList li { padding:12px 16px; margin:6px 0; background:#eef4f4; border-radius:6px; cursor:pointer; transition:background .15s; font-size:14px; }
+  .helpMenuList li:hover { background:#2b7a78; color:#fff; }
+  .helpMenuList li small { display:block; color:#666; font-size:12px; margin-top:2px; }
+  .helpMenuList li:hover small { color:#e0f2f1; }
+  .backBtn { background:#6c5ce7; margin-bottom:12px; font-size:13px; padding:5px 12px; }
+  .helpPage pre { background:#f4f6f8; padding:12px; border-radius:6px; direction:ltr; text-align:left; font-size:12px; overflow-x:auto; line-height:1.5; margin:8px 0; }
+  .multiGrid { display:flex; gap:16px; flex-wrap:wrap; }
+  .multiGrid .panel { flex:1; min-width:300px; }
+  .multiLabel { font-size:13px; font-weight:bold; color:#2b7a78; text-align:center; margin-bottom:6px; }
+
+  .dialog { background:#f9fbfc; border-radius:8px; padding:12px 16px; margin:10px 0; border-right:4px solid #6c5ce7; }
+  .dialog .who { font-weight:bold; color:#6c5ce7; font-size:13px; margin-bottom:4px; }
+  .dialog .msg { font-size:13px; line-height:1.9; }
+  .dialog.answer { border-right-color:#1a7f37; }
+  .dialog.answer .who { color:#1a7f37; }
+  .dialog.warn { border-right-color:#e8a87c; background:#fff8e1; }
+  .dialog.warn .who { color:#c0392b; }
+  .dialog .formula { direction:ltr; text-align:center; font-family:monospace; background:#fff; padding:6px; border-radius:4px; margin:8px 0; font-size:14px; }
+  .stepBox { background:#fff; border:1px solid #e0e6e6; border-radius:6px; padding:10px; margin:8px 0; }
+  .stepBox .stepNum { display:inline-block; background:#2b7a78; color:#fff; width:22px; height:22px; border-radius:50%; text-align:center; line-height:22px; font-size:12px; margin-left:6px; }
+  .checklist { list-style:none; padding:0; }
+  .checklist li { padding:8px 12px; margin:4px 0; background:#fff; border-radius:6px; border:1px solid #e0e6e6; }
+  .checklist li.yes { border-right:4px solid #1a7f37; }
+  .checklist li.no { border-right:4px solid #c0392b; }
+  .shortcutBtns { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+  .shortcutBtns button { background:#6c5ce7; font-size:12px; padding:6px 12px; }
+  .shortcutBtns button.orange { background:#e8a87c; }
+  .shortcutBtns button.green { background:#1a7f37; }
+
+  /* NEW: چراغ وضعیت */
+  #statusLamp {
+    display:none;
+    align-items:center; gap:10px;
+    padding:10px 16px; border-radius:8px; margin:12px 0;
+    font-size:14px; font-weight:bold;
+  }
+  #statusLamp.show { display:flex; }
+  #statusLamp.good { background:#e8f5e9; color:#1a7f37; border:2px solid #1a7f37; }
+  #statusLamp.bad { background:#ffebee; color:#c0392b; border:2px solid #c0392b; }
+  #statusLamp.partial { background:#fff8e1; color:#e67e22; border:2px solid #e67e22; }
+  #statusLamp .lampDot {
+    width:16px; height:16px; border-radius:50%;
+    animation:pulse 1s infinite;
+  }
+  #statusLamp.good .lampDot { background:#1a7f37; }
+  #statusLamp.bad .lampDot { background:#c0392b; }
+  #statusLamp.partial .lampDot { background:#e67e22; }
+  @keyframes pulse {
+    0%, 100% { opacity:1; transform:scale(1); }
+    50% { opacity:0.5; transform:scale(1.2); }
+  }
+
+  /* NEW: نوار کیفیت یادگیری */
+  #qualityBarWrap {
+    display:none;
+    background:#fff; border-radius:8px; padding:12px 16px; margin:12px 0;
+    box-shadow:0 1px 4px rgba(0,0,0,.08);
+  }
+  #qualityBarWrap.show { display:block; }
+  #qualityBarWrap .qHeader {
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:13px; margin-bottom:6px;
+  }
+  #qualityBarWrap .qHeader .qPct { font-weight:bold; font-size:16px; }
+  #qualityBarOuter {
+    height:16px; background:#e0e6e6; border-radius:8px; overflow:hidden;
+  }
+  #qualityBarFill {
+    height:16px; border-radius:8px; transition:width .6s ease, background .3s;
+    width:0%;
+  }
+  #qualityBarFill.good { background:linear-gradient(90deg,#1a7f37,#27ae60); }
+  #qualityBarFill.partial { background:linear-gradient(90deg,#e67e22,#f39c12); }
+  #qualityBarFill.bad { background:linear-gradient(90deg,#c0392b,#e74c3c); }
+
+  /* NEW: پیام پیشنهاد هوشمند */
+  #smartTip {
+    display:none;
+    background:#fff8e1; border-radius:8px; padding:12px 16px; margin:12px 0;
+    border-right:4px solid #e8a87c; font-size:13px; line-height:1.8;
+  }
+  #smartTip.show { display:block; }
+  #smartTip b { color:#c0392b; }
+
+  /* NEW: دکمه صدا */
+  #soundBtn {
+    background:#34495e; font-size:12px; padding:5px 12px;
+  }
+  #soundBtn.on { background:#27ae60; }
+
+  /* NEW: اسلایدر سرعت انیمیشن */
+  #animSpeedWrap { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#555; margin-right:8px; }
+
+  /* استایل‌های انیمیشن (قبلی) */
+  #animPanel { display:none; background:#fff; border-radius:10px; padding:16px; margin-top:16px; box-shadow:0 2px 10px rgba(0,0,0,.12); border:2px solid #6c5ce7; }
+  #animPanel.active { display:block; }
+  #animPanel h3 { text-align:right; font-size:16px; color:#6c5ce7; margin:0 0 10px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+  #animPanel h3 .animControls { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  #animPanel h3 .animControls button { font-size:12px; padding:5px 10px; }
+  #animStageInfo { background:#f9fbfc; border-radius:8px; padding:12px 16px; margin:10px 0; border-right:4px solid #6c5ce7; font-size:13px; line-height:1.9; min-height:70px; }
+  #animStageInfo .stageTitle { font-weight:bold; color:#6c5ce7; font-size:14px; margin-bottom:4px; }
+  #animStageInfo .stageFormula { direction:ltr; text-align:center; font-family:monospace; background:#fff; padding:6px; border-radius:4px; margin:8px 0; font-size:13px; }
+  #animCanvasWrap { display:flex; gap:16px; flex-wrap:wrap; justify-content:center; }
+  #animCanvasWrap .animBox { text-align:center; }
+  #animCanvasWrap .animBox .animLabel { font-size:12px; color:#444; font-weight:bold; margin-bottom:4px; }
+  #animProgressOuter { height:8px; background:#e0e6e6; border-radius:4px; overflow:hidden; margin:10px 0; }
+  #animProgressBar { height:8px; background:#6c5ce7; width:0%; border-radius:4px; transition:width .3s; }
+  #animStageDots { display:flex; gap:8px; justify-content:center; margin:8px 0; }
+  #animStageDots .dot { width:28px; height:28px; border-radius:50%; background:#e0e6e6; color:#666; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; transition:all .3s; }
+  #animStageDots .dot.active { background:#6c5ce7; color:#fff; transform:scale(1.15); }
+  #animStageDots .dot.done { background:#1a7f37; color:#fff; }
+</style>
+</head>
+<body>
+  <h2>شبیه‌ساز شبکه عصبی — گیت‌های منطقی و نیم‌جمع‌کننده</h2>
+
+  <div class="shortcutBtns">
+    <button id="quickWhy3" class="help">🔢 چرا حداقل ۳ نورون برای XOR لازم است؟</button>
+    <button id="soundBtn">🔊 فعال‌سازی صدا</button>
+  </div>
+
+  <div class="controls">
+    <label>گیت منطقی:
+      <select id="gate">
+        <option value="XOR" selected>XOR</option>
+        <option value="XNOR">XNOR</option>
+        <option value="AND">AND</option>
+        <option value="OR">OR</option>
+        <option value="NAND">NAND</option>
+        <option value="NOR">NOR</option>
+        <option value="NOT">NOT (تک‌ورودی)</option>
+        <option value="BUFFER">BUFFER (تک‌ورودی)</option>
+        <option value="HALF_ADDER">نیم‌جمع‌کننده (دو خروجی)</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="hint" id="gateHint"></div>
+
+  <!-- NEW: چراغ وضعیت -->
+  <div id="statusLamp">
+    <div class="lampDot"></div>
+    <span id="statusText">وضعیت</span>
+  </div>
+
+  <!-- NEW: نوار کیفیت یادگیری -->
+  <div id="qualityBarWrap">
+    <div class="qHeader">
+      <span>📊 کیفیت یادگیری (چند تا از ۴ حالت درست است؟)</span>
+      <span class="qPct" id="qualityPct">0%</span>
+    </div>
+    <div id="qualityBarOuter">
+      <div id="qualityBarFill"></div>
+    </div>
+  </div>
+
+  <!-- NEW: پیام پیشنهاد هوشمند -->
+  <div id="smartTip"></div>
+
+  <div class="controls">
+    <label>نرون مخفی: <span class="val" id="hVal">2</span>
+      <input type="range" id="hidden" min="1" max="6" value="2">
+    </label>
+    <label>نرخ یادگیری: <span class="val" id="lrVal">0.5</span>
+      <input type="range" id="lr" min="0.05" max="2" step="0.05" value="0.5">
+    </label>
+    <label>دورها: <span class="val" id="epVal">20000</span>
+      <input type="range" id="epochs" min="1000" max="50000" step="1000" value="20000">
+    </label>
+    <button id="run">آموزش و رسم</button>
+    <button id="stop" class="danger" disabled>توقف</button>
+    <button id="random" class="secondary">تصادفی جدید</button>
+    <button id="save" class="secondary">ذخیره وزن‌ها</button>
+    <button id="load" class="secondary">بارگذاری وزن‌ها</button>
+    <button id="helpBtn" class="help">راهنما ❓</button>
+    <input type="file" id="loadFile" accept=".json" style="display:none">
+  </div>
+
+  <div id="progressWrap">
+    <div id="progressOuter"><div id="progressBar"></div></div>
+    <div style="font-size:12px; color:#555; margin-top:3px;" id="progressText"></div>
+  </div>
+
+  <div id="chartsArea"></div>
+
+  <!-- پنل انیمیشن -->
+  <div id="animPanel">
+    <h3>
+      <span>🎬 انیمیشن آموزش XOR — مرحله‌به‌مرحله</span>
+      <span class="animControls">
+        <span id="animSpeedWrap">
+          <label>سرعت:</label>
+          <input type="range" id="animSpeed" min="0.5" max="3" step="0.5" value="1" style="width:60px;">
+          <span class="val" id="animSpeedVal">1x</span>
+        </span>
+        <button id="animReplay" class="secondary">🔁 تکرار</button>
+        <button id="animSkip" class="danger">⏭️ رد کردن</button>
+        <button id="animClose" class="secondary">✕ بستن</button>
+      </span>
+    </h3>
+
+    <div id="animStageDots">
+      <div class="dot" data-stage="1">۱</div>
+      <div class="dot" data-stage="2">۲</div>
+      <div class="dot" data-stage="3">۳</div>
+      <div class="dot" data-stage="4">۴</div>
+    </div>
+
+    <div id="animProgressOuter"><div id="animProgressBar"></div></div>
+
+    <div id="animStageInfo">
+      <div class="stageTitle">آماده...</div>
+      <div class="stageDesc">دکمه تکرار را بزنید یا منتظر بمانید.</div>
+    </div>
+
+    <div id="animCanvasWrap">
+      <div class="animBox">
+        <div class="animLabel">h1 = OR(x1,x2)</div>
+        <canvas id="animCanvas1" width="220" height="220"></canvas>
+      </div>
+      <div class="animBox">
+        <div class="animLabel">h2 = AND(x1,x2)</div>
+        <canvas id="animCanvas2" width="220" height="220"></canvas>
+      </div>
+      <div class="animBox">
+        <div class="animLabel">خروجی نهایی = XOR</div>
+        <canvas id="animCanvasOut" width="220" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="rolesPanel" style="margin-top:16px; display:none;">
+    <h3>نقش نورون‌ها (تشخیص خودکار)</h3>
+    <div id="rolesContent"></div>
+  </div>
+
+  <div id="results">منتظر اجرا...</div>
+
+  <!-- مودال راهنما -->
+  <div id="helpModal">
+    <div class="modalContent">
+      <button class="closeModal" id="closeHelp">✕</button>
+
+      <div id="helpMenu" class="helpPage active">
+        <h2>راهنمای شبیه‌ساز شبکه عصبی</h2>
+        <p style="font-size:13px; color:#666;">برای مشاهده هر بخش، روی آن کلیک کنید:</p>
+        <ul class="helpMenuList">
+          <li data-page="goal">🎯 هدف برنامه<small>چرا این برنامه ساخته شده</small></li>
+          <li data-page="arch">🏗️ معماری شبکه<small>ساختار شبکه عصبی</small></li>
+          <li data-page="ui">🎨 طرح رابط کاربری<small>چیدمان صفحه و نمودارها</small></li>
+          <li data-page="interpret">👀 تفسیر خروجی<small>چطور نتایج را بخوانیم</small></li>
+          <li data-page="challenges">🎓 چالش‌های آموزشی<small>سوالات و نکات یادگیری</small></li>
+          <li data-page="summary">📌 خلاصه تصمیم نهایی<small>جدول تصمیمات طراحی</small></li>
+          <li data-page="misunderstanding">⚠️ رفع سوءتفاهم<small>نکات مهم و اشتباهات رایج</small></li>
+          <li data-page="why3" style="background:#6c5ce7; color:#fff;">🔢 چرا حداقل ۳ نورون برای XOR لازم است؟<small style="color:#e0f2f1;">دیالوگ کامل و قدم‌به‌قدم</small></li>
+          <li data-page="localMin" style="background:#c0392b; color:#fff;">🎯 چرا یادگیری XOR «بگیر نگیر» دارد؟<small style="color:#ffe0e0;">مینیمم محلی و راه‌حل</small></li>
+        </ul>
+      </div>
+
+      <div id="page-goal" class="helpPage">
+        <button class="backBtn" data-back>← بازگشت به منو</button>
+        <h2>🎯 هدف برنامه</h2>
+        <ul>
+          <li>اثبات اینکه یک <b>شبکه عصبی ساده با ۱ لایه مخفی</b> می‌تواند <b>همه‌ی گیت‌های منطقی</b> را یاد بگیرد.</li>
+          <li>نمایش اینکه یک شبکه با <b>دو خروجی</b> می‌تواند هم‌زمان دو تابع (مثل Sum و Carry در نیم‌جمع‌کننده) را یاد بگیرد.</li>
+          <li>کاربر ببیند چگونه یک معماری ساده، رفتار هوشمند از خود نشان می‌دهد.</li>
+          <li>هدف آموزشی: درک شهودی از یادگیری شبکه عصبی و مرز تصمیم‌گیری.</li>
+        </ul>
+      </div>
+
+      <div id="page-arch" class="helpPage">
+        <button class="backBtn" data-back>← بازگشت به منو</button>
+        <h2>🏗️ معماری شبکه</h2>
+        <p>شبکه از سه لایه تشکیل شده است:</p>
+        <pre>
+        ┌──────────────┐
+x0 ─────┤              ├─── out1 (Sum   = XOR)
+        │  لایه مخفی    │
+x1 ─────┤  (H نورون)   ├─── out2 (Carry = AND)
+        └──────────────┘
+        </pre>
+        <ul>
+          <li><b>ورودی:</b> ۲ نورون (x0 و x1)</li>
+          <li><b>لایه مخفی:</b> H نورون (قابل تنظیم ۱ تا ۶)</li>
+          <li><b>خروجی:</b> ۱ یا ۲ نورون (بسته به گیت انتخابی)</li>
+          <li>برای گیت‌های تک‌خروجی: ۱ نورون خروجی</li>
+          <li>برای نیم‌جمع‌کننده: ۲ نورون خروجی (Sum و Carry)</li>
+        </ul>
+        <p style="font-size:13px; color:#666;">
+          هر نورون مخفی فقط یک مرز خطی می‌سازد. توابع غیرخطی مثل XOR با ترکیب چند نورون ساخته می‌شوند.
+        </p>
+      </div>
+
+      <div id="page-ui" class="helpPage">
+        <button class="backBtn" data-back>← بازگشت به منو</button>
+        <h2>🎨 طرح رابط کاربری</h2>
+        <pre>
+┌───────────────────────────────────────────────────────────────────┐
+│  گیت: [نیم‌جمع‌کننده ▼]   نورون مخفی: [2]  lr: [0.5]  دور: [20000]  │
+├───────────────────────────────────────────────────────────────────┤
+│  💡 نیم‌جمع‌کننده: یه شبکه با دو خروجی (Sum = XOR, Carry = AND)     │
+├───────────────────────────────────────────────────────────────────┤
+│  🟢 چراغ وضعیت: ✅ یاد گرفت / ❌ یاد نگرفت                         │
+│  📊 نوار کیفیت: [████████░░] ۷۵٪                                  │
+├──────────────────────────┬────────────────────────────────────────┤
+│  مرز تصمیم‌گیری — Sum     │  مرز تصمیم‌گیری — Carry                 │
+│  [canvas]                │  [canvas]                              │
+├──────────────────────────┼────────────────────────────────────────┤
+│  ۴ نقطه — Sum            │  ۴ نقطه — Carry                        │
+│  [canvas]                │  [canvas]                              │
+├──────────────────────────┴────────────────────────────────────────┤
+│  نمودار Loss (ترکیبی + تفکیکی)                                    │
+├───────────────────────────────────────────────────────────────────┤
+│  📊 جدول نقش‌ها — Sum                                              │
+│  📊 جدول نقش‌ها — Carry                                            │
+│  🔗 سهم نورون‌های میانی در هر خروجی (وزن‌های W2)                    │
+├───────────────────────────────────────────────────────────────────┤
+│  نتایج نهایی                                                      │
+└───────────────────────────────────────────────────────────────────┘
+        </pre>
+      </div>
+
+      <div id="page-interpret" class="helpPage">
+        <button class="backBtn" data-back>← بازگشت به منو</button>
+        <h2>👀 چه چیزی را ببین و تفسیر کن؟</h2>
+        <ul>
+          <li><b>چراغ وضعیت:</b> سبز = یاد گرفت، قرمز = یاد نگرفت، زرد = ناقص.</li>
+          <li><b>نوار کیفیت:</b> درصد موفقیت روی ۴ حالت ورودی.</li>
+          <li><b>نمودار مرز تصمیم‌گیری:</b> چطور شبکه فضا را تقسیم می‌کند.</li>
+          <li><b>نمودار Loss:</b> چطور خطا کاهش می‌یابد.</li>
+          <li><b>نقش نورون‌ها:</b> هر نورون مخفی چه تابعی را یاد گرفته.</li>
+          <li><b>سهم نورون‌ها در خروجی‌ها:</b> هر نورون چقدر به هر خروجی کمک می‌کند.</li>
+        </ul>
+      </div>
+
+      <div id="page-challenges" class="helpPage">
+        <button class="backBtn" data-back>← بازگشت به منو</button>
+        <h2>🎓 چالش‌های آموزشی</h2>
+        <h3>۱. چرا یه نورون تنها نمی‌تونه XOR یاد بگیره؟</h3>
+        <ul>
+          <li>هر نورون میانی فقط یک مرز خطی می‌سازد.</li>
+          <li>XOR خطی جداپذیر نیست.</li>
+          <li>پس XOR فقط با <b>ترکیب چند نورون</b> ساخته می‌شود.</li>
+        </ul>
+        <h3>۲. نیم‌جمع‌کننده یعنی چی؟</h3>
+        <ul>
+          <li>نیم‌جمع‌کننده یک مدار منطقی با <b>۲ ورودی و ۲ خروجی</b> است:
+            <br>Sum = A XOR B &nbsp;|&nbsp; Carry = A AND B</li>
+          <li>در این برنامه با <b>یک شبکه با دو خروجی</b> پیاده‌سازی شده.</li>
+        </ul>
+        <h3>۳. چرا یادگیری XOR «بگیر نگیر» دارد؟</h3>
+        <ul>
+          <li>با ۲ نورون مخفی، شبکه در «تنگنای ظرفیت» است.</li>
+          <li>ممکن است در مینیمم محلی گیر کند.</li>
+          <li>راه‌حل: seed جدید، نرون بیشتر، یا نرخ یادگیری متفاوت.</li>
+        </ul>
+      </div>
+
+      <div id="page-summary" class="helpPage">
+        <button class="backBtn" data-back>← بازگشت به منو</button>
+        <h2>📌 خلاصه تصمیم نهایی</h2>
+        <table>
+          <tr><th>موضوع</th><th>تصمیم</th></tr>
+          <tr><td>گیت‌های اضافه‌شده</td><td>NOT، BUFFER، نیم‌جمع‌کننده</td></tr>
+          <tr><td>گیت‌های تک‌ورودی</td><td>فقط x0 مؤثر است، x1 بی‌اثر</td></tr>
+          <tr><td>حداقل نورون مخفی</td><td>۱ (هیچ‌وقت ۰ نمی‌شود)</td></tr>
+          <tr><td>معماری</td><td>یکسان: ورودی → لایه مخفی → خروجی</td></tr>
+          <tr><td>نیم‌جمع‌کننده</td><td>یک شبکه با دو خروجی (Sum و Carry)</td></tr>
+          <tr><td>ذخیره loss</td><td>✅ در فایل JSON ذخیره می‌شود</td></tr>
+          <tr><td>چراغ وضعیت</td><td>✅ سبز/قرمز/زرد</td></tr>
+          <tr><td>نوار کیفیت</td><td>✅ درصد موفقیت</td></tr>
+          <tr><td>پیشنهاد هوشمند</td><td>✅ در صورت شکست</td></tr>
+          <tr><td>صدا</td><td>✅ بیپ بین مراحل انیمیشن</td></tr>
+        </table>
+      </div>
+
+      <div id="page-misunderstanding" class="helpPage">
+        <button class="backBtn" data-back>← بازگشت به منو</button>
+        <h2>⚠️ رفع سوءتفاهم</h2>
+        <div class="note">
+          «۰ نورون» یعنی <b>حذف لایه مخفی</b>، نه حذف نورون از گیت‌های تک‌ورودی.
+        </div>
+        <ul>
+          <li>گیت‌های تک‌ورودی (NOT, BUFFER) هم با ۱ نورون مخفی آموزش می‌بینند.</li>
+          <li>معماری همیشه یکسان است — فقط جدول هدف (targets) عوض می‌شود.</li>
+          <li>شبکه یاد می‌گیرد ورودی بی‌ربط (x1) را نادیده بگیرد.</li>
+          <li>برای نیم‌جمع‌کننده، دو خروجی از همان لایه مخفی تغذیه می‌شوند.</li>
+        </ul>
+      </div>
+
+      <div id="page-why3" class="helpPage">
+        <button class="backBtn" data-back>← بازگشت به منو</button>
+        <h2>🔢 چرا حداقل ۳ نورون برای یادگیری XOR لازم است؟</h2>
+        <p style="font-size:13px; color:#666;">این صفحه، دیالوگ کامل امروز را قدم‌به‌قدم بازگو می‌کند.</p>
+
+        <div class="stepBox">
+          <span class="stepNum">۱</span> <b>سوال کلیدی:</b>
+          <div class="dialog">
+            <div class="who">👤 کاربر:</div>
+            <div class="msg">«ببین این فرمول درسته؟ <code>XOR = h1 AND NOT h2</code> اگه h1 = OR و h2 = AND و x1=0 و x2=0؟»</div>
+          </div>
+        </div>
+
+        <div class="stepBox">
+          <span class="stepNum">۲</span> <b>پاسخ قدم‌به‌قدم:</b>
+          <div class="dialog answer">
+            <div class="who">🤖 پاسخ:</div>
+            <div class="msg">
+              اول مقادیر را حساب می‌کنیم:
+              <ul>
+                <li><code>h1 = OR(0,0) = 0</code></li>
+                <li><code>h2 = AND(0,0) = 0</code></li>
+                <li>فرمول: <code>0 AND NOT(0) = 0 AND 1 = 0</code></li>
+                <li>XOR واقعی: <code>XOR(0,0) = 0</code> ✅</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="stepBox">
+          <span class="stepNum">۳</span> <b>تست همه حالت‌ها:</b>
+          <table>
+            <tr><th>x1</th><th>x2</th><th>h1=OR</th><th>h2=AND</th><th>h1 AND NOT(h2)</th><th>XOR واقعی</th><th>نتیجه</th></tr>
+            <tr><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>✅</td></tr>
+            <tr><td>0</td><td>1</td><td>1</td><td>0</td><td>1</td><td>1</td><td>✅</td></tr>
+            <tr><td>1</td><td>0</td><td>1</td><td>0</td><td>1</td><td>1</td><td>✅</td></tr>
+            <tr><td>1</td><td>1</td><td>1</td><td>1</td><td>0</td><td>0</td><td>✅</td></tr>
+          </table>
+          <div class="dialog answer">
+            <div class="who">🤖 نتیجه:</div>
+            <div class="msg">فرمول <b>کاملاً درست است</b> و برای همه حالت‌ها جواب می‌دهد. ✅</div>
+          </div>
+        </div>
+
+        <div class="stepBox">
+          <span class="stepNum">۴</span> <b>پس چرا ۳ نورون؟</b>
+          <div class="dialog warn">
+            <div class="who">💡 نکته کلیدی:</div>
+            <div class="msg">
+              فرمول <code>XOR = OR AND NOT(AND)</code> سه عمل دارد:
+              <ol>
+                <li><b>OR</b> → یک نورون مخفی (h1)</li>
+                <li><b>AND</b> → یک نورون مخفی (h2)</li>
+                <li><b>AND نهایی + NOT</b> → این عمل سوم است و باید یک جایی انجام شود!</li>
+              </ol>
+              آن «جای سوم» همان <b>نورون لایه خروجی</b> است.
+            </div>
+          </div>
+        </div>
+
+        <div class="stepBox">
+          <span class="stepNum">۵</span> <b>جدول نقش‌ها:</b>
+          <table>
+            <tr><th>لایه</th><th>نقش</th><th>مخفی؟</th></tr>
+            <tr><td>لایه مخفی (h1 = OR)</td><td>ساخت ویژگی میانی</td><td>✅ بله</td></tr>
+            <tr><td>لایه مخفی (h2 = AND)</td><td>ساخت ویژگی میانی</td><td>✅ بله</td></tr>
+            <tr><td>لایه خروجی (AND نهایی + NOT)</td><td>تولید XOR نهایی</td><td>❌ نه، آشکار</td></tr>
+          </table>
+        </div>
+
+        <div class="stepBox">
+          <span class="stepNum">۶</span> <b>چرا لایه خروجی هم «نورون» است؟</b>
+          <div class="dialog answer">
+            <div class="who">🤖 پاسخ:</div>
+            <div class="msg">
+              هر نورون = جمع وزنی + بایاس + تابع فعال‌سازی. لایه خروجی هم دقیقاً همینه:
+              <ul>
+                <li>ورودی‌هاش: h1 و h2</li>
+                <li>وزن‌ها: مثلاً <code>w1=+1, w2=-1</code></li>
+                <li>بایاس: مثلاً <code>-0.5</code></li>
+                <li>فعال‌سازی: step</li>
+              </ul>
+              این دقیقاً معادل <code>h1 AND NOT(h2)</code> است. ✅
+            </div>
+          </div>
+        </div>
+
+        <div class="stepBox">
+          <span class="stepNum">۷</span> <b>پس «مخفی» یعنی چی؟</b>
+          <div class="dialog">
+            <div class="who">👤 کاربر:</div>
+            <div class="msg">«منظورت از مخفی بودن نورون‌های لایه مخفی اینکه نرون‌های این لایه قرار پارامتر بشن برای نرون لایه خروجی ولی چون نرون لایه خروجی مستقیم نتیجه پردازش رو برون میده مخفی بهش نمی‌گیم؟»</div>
+          </div>
+          <div class="dialog answer">
+            <div class="who">🤖 پاسخ:</div>
+            <div class="msg">
+              ✅ <b>دقیقاً درست!</b>
+              <ul>
+                <li><b>مخفی</b> = خروجی‌شون به بیرون نمی‌ره، فقط ورودی لایه بعدی می‌شه.</li>
+                <li><b>آشکار (خروجی)</b> = خروجی‌ش همون چیزیه که کاربر نهایی می‌بینه.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="stepBox">
+          <span class="stepNum">۸</span> <b>چک‌لیست نهایی:</b>
+          <ul class="checklist">
+            <li class="no">❌ با ۲ نرون به‌تنهایی (بدون لایه خروجی پردازشگر) XOR یاد گرفته نمی‌شه.</li>
+            <li class="yes">✅ حداقل ۳ نرون لازمه: ۲ مخفی (OR و AND) + ۱ خروجی (AND نهایی + NOT).</li>
+            <li class="yes">✅ «مخفی» یعنی خروجی به بیرون نمی‌ره؛ «خروجی» یعنی نتیجه نهایی رو می‌ده.</li>
+            <li class="yes">✅ فرمول <code>XOR = OR AND NOT(AND)</code> درسته — فقط باید یه نورون سوم این AND نهایی رو انجام بده.</li>
+          </ul>
+        </div>
+
+        <div class="note" style="text-align:center;">
+          <b>فرمول نهایی:</b>
+          <div class="formula">XOR(x1,x2) = (x1 OR x2) AND NOT(x1 AND x2)</div>
+          <div class="formula">h1 = OR(x1,x2) &nbsp;|&nbsp; h2 = AND(x1,x2) &nbsp;|&nbsp; out = h1 AND NOT(h2)</div>
+        </div>
+
+        <div class="shortcutBtns" style="justify-content:center; margin-top:16px;">
+          <button class="green" onclick="closeHelpAndRunAnim(1)">
+            🔬 تست: XOR با ۱ نرون مخفی (شکست)
+          </button>
+          <button class="orange" onclick="closeHelpAndRunAnim(2)">
+            🎬 تست: XOR با ۲ نرون مخفی (موفق + انیمیشن)
+          </button>
+        </div>
+      </div>
+
+      <!-- NEW: صفحه مینیمم محلی -->
+      <div id="page-localMin" class="helpPage">
+        <button class="backBtn" data-back>← بازگشت به منو</button>
+        <h2>🎯 چرا یادگیری XOR «بگیر نگیر» دارد؟</h2>
+        <p style="font-size:13px; color:#666;">این صفحه دقیقاً همون دغدغه‌ی تو رو حل می‌کنه: چرا با ۲ نرون مخفی، گاهی یاد می‌گیره و گاهی نه.</p>
+
+        <div class="stepBox">
+          <span class="stepNum">۱</span> <b>مشکل چیه؟</b>
+          <div class="dialog warn">
+            <div class="who">💡 مشاهده:</div>
+            <div class="msg">
+              با ۲ نرون مخفی، هر بار که «آموزش و رسم» رو می‌زنی، یه نتیجه‌ی متفاوت می‌گیری:
+              <ul>
+                <li>گاهی ✅ همه ۴ حالت درست</li>
+                <li>گاهی ❌ ۳ یا ۲ حالت درست</li>
+                <li>گاهی ⚠️ ۱ حالت درست</li>
+              </ul>
+              این «بگیر نگیر» بودن، تقصیر کد نیست — یه پدیده‌ی واقعی در شبکه‌های عصبیه.
+            </div>
+          </div>
+        </div>
+
+        <div class="stepBox">
+          <span class="stepNum">۲</span> <b>سه دلیل فنی:</b>
+          <div class="dialog answer">
+            <div class="who">🤖 پاسخ:</div>
+            <div class="msg">
+              <ol>
+                <li><b>کمبود نورون:</b> XOR به ۲ نورون مخفی نیاز داره، ولی با <b>دقیقاً ۲</b>، شبکه در تنگنای ظرفیت گیر می‌کنه. با ۳ نورون، آزادی بیشتری داره.</li>
+                <li><b>مینیمم محلی:</b> تابع خطا (loss) چند تا «چاله» داره. بسته به وزن اولیه، شبکه ممکنه تو یه چاله‌ی بد گیر کنه و هیچ‌وقت به جواب درست نرسه.</li>
+                <li><b>حساسیت به seed:</b> چون وزن اولیه تصادفیه، هر بار یه نتیجه‌ی متفاوت.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <div class="stepBox">
+          <span class="stepNum">۳</span> <b>چطور بفهمم شبکه یاد گرفته یا نه؟</b>
+          <div class="dialog answer">
+            <div class="who">🤖 راه‌حل:</b></div>
+            <div class="msg">
+              سه نشانگر بصری اضافه شده:
+              <ul>
+                <li><b>🟢 چراغ وضعیت:</b> سبز = همه ۴ حالت درست، قرمز = شکست، زرد = ناقص</li>
+                <li><b>📊 نوار کیفیت:</b> درصد موفقیت (0% تا 100%)</li>
+                <li><b>💡 پیشنهاد هوشمند:</b> اگه شکست خورد، راه‌حل پیشنهاد می‌ده</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="stepBox">
+          <span class="stepNum">۴</span> <b>راه‌حل‌های پیشنهادی:</b>
+          <div class="dialog answer">
+            <div class="who">🤖 اگر شکست خورد:</div>
+            <div class="msg">
+              <ol>
+                <li><b>🎲 seed جدید:</b> دکمه «تصادفی جدید» رو بزن و دوباره آموزش بده</li>
+                <li><b>➕ نرون بیشتر:</b> نرون مخفی رو از ۲ به ۳ تغییر بده</li>
+                <li><b>⚡ نرخ یادگیری:</b> lr رو کمی تغییر بده (مثلاً 0.3 یا 0.8)</li>
+                <li><b>🔁 دورهای بیشتر:</b> epochs رو افزایش بده</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <div class="stepBox">
+          <span class="stepNum">۵</span> <b>چرا با ۳ نرون بهتره؟</b>
+          <div class="dialog answer">
+            <div class="who">🤖 پاسخ:</div>
+            <div class="msg">
+              با ۳ نورون مخفی، شبکه <b>یک نورون اضافه</b> داره که می‌تونه نقش «پشتیبان» یا «تنظیم‌کننده» رو بازی کنه. این باعث می‌شه:
+              <ul>
+                <li>فضای جواب بزرگ‌تر بشه</li>
+                <li>کمتر تو مینیمم محلی گیر کنه</li>
+                <li>یادگیری پایدارتر بشه</li>
+              </ul>
+              <b>نکته:</b> این یعنی «۳ نرون مخفی» بهتر از «۲ نرون مخفی» است، نه اینکه ۲ نرون اصلاً کار نمی‌کنه.
+            </div>
+          </div>
+        </div>
+
+        <div class="note" style="text-align:center;">
+          <b>خلاصه:</b>
+          <div class="formula">۲ نرون مخفی → یادگیری ممکن ولی ناپایدار</div>
+          <div class="formula">۳ نرون مخفی → یادگیری پایدارتر و آسان‌تر</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+/* ========== توابع پایه ========== */
+const sigmoid  = x => 1 / (1 + Math.exp(-x));
+const dsigmoid = o => o * (1 - o);
+const inputs  = [[0,0],[0,1],[1,0],[1,1]];
+const $ = id => document.getElementById(id);
+
+const GATES = {
+  AND:    { targets: [[0,0,0,1]], names: ['AND'] },
+  OR:     { targets: [[0,1,1,1]], names: ['OR'] },
+  NAND:   { targets: [[1,1,1,0]], names: ['NAND'] },
+  NOR:    { targets: [[1,0,0,0]], names: ['NOR'] },
+  XOR:    { targets: [[0,1,1,0]], names: ['XOR'] },
+  XNOR:   { targets: [[1,0,0,1]], names: ['XNOR'] },
+  NOT:    { targets: [[1,1,0,0]], names: ['NOT x0'] },
+  BUFFER: { targets: [[0,0,1,1]], names: ['BUFFER (x0)'] },
+  HALF_ADDER: {
+    targets: [
+      [0,1,1,0],
+      [0,0,0,1]
+    ],
+    names: ['Sum (XOR)', 'Carry (AND)']
+  }
+};
+
+const LINEAR_GATES = ['AND','OR','NAND','NOR','NOT','BUFFER'];
+
+const ROLE_PATTERNS = {
+  '0,0,0,0': 'همیشه 0',
+  '1,1,1,1': 'همیشه 1',
+  '0,0,0,1': 'AND',
+  '0,1,1,1': 'OR',
+  '1,1,1,0': 'NAND',
+  '1,0,0,0': 'NOR',
+  '0,1,1,0': 'XOR',
+  '1,0,0,1': 'XNOR',
+  '0,0,1,1': 'x0 (BUFFER)',
+  '0,1,0,1': 'x1',
+  '1,1,0,0': 'NOT x0',
+  '1,0,1,0': 'NOT x1',
+  '0,1,0,0': 'x0 ∧ ¬x1',
+  '0,0,1,0': 'x1 ∧ ¬x0',
+  '1,1,0,1': 'x0 ∨ ¬x1',
+  '1,0,1,1': 'x1 ∨ ¬x0',
+};
+function detectRole(bits) { return ROLE_PATTERNS[bits.join(',')] || 'ناشناخته'; }
+
+let seed = Date.now() % 100000;
+function rand() { seed = (seed * 9301 + 49297) % 233280; return (seed / 233280) * 2 - 1; }
+
+let stopRequested = false;
+let isTraining = false;
+let lastNet = null;
+
+/* NEW: سیستم صدا با Web Audio API */
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+let soundEnabled = false;
+
+function initAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playBeep(freq = 600, duration = 0.15, volume = 0.08) {
+  if (!soundEnabled || !audioCtx) return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  } catch(e) { /* بی‌صدا */ }
+}
+
+function playSuccessSound() {
+  if (!soundEnabled) return;
+  playBeep(660, 0.12);
+  setTimeout(() => playBeep(880, 0.15), 130);
+  setTimeout(() => playBeep(1100, 0.2), 280);
+}
+
+function playFailSound() {
+  if (!soundEnabled) return;
+  playBeep(300, 0.2);
+  setTimeout(() => playBeep(200, 0.25), 220);
+}
+
+$('soundBtn').onclick = () => {
+  initAudio();
+  soundEnabled = !soundEnabled;
+  $('soundBtn').classList.toggle('on', soundEnabled);
+  $('soundBtn').textContent = soundEnabled ? '🔊 صدا فعال' : '🔇 صدا خاموش';
+  if (soundEnabled) playBeep(880, 0.1);
+};
+
+/* ========== آموزش ========== */
+async function trainNetwork(H, lr, EPOCHS, targetsList, onProgress) {
+  const numOut = targetsList.length;
+  let W1 = Array.from({length:H}, () => [rand(), rand()]);
+  let b1 = Array(H).fill(0);
+  let W2 = Array.from({length:numOut}, () => Array(H).fill(0).map(rand));
+  let b2 = Array(numOut).fill(0);
+  const CHUNK = 500;
+  let lossHistory = [];
+  let lossHistoryEach = Array.from({length:numOut}, () => []);
+
+  for (let ep = 0; ep < EPOCHS; ep += CHUNK) {
+    for (let k = 0; k < CHUNK && ep + k < EPOCHS; k++) {
+      let totalLoss = 0;
+      let eachLoss = Array(numOut).fill(0);
+      for (let n = 0; n < inputs.length; n++) {
+        const x = inputs[n];
+        const hOut = new Array(H);
+        for (let h = 0; h < H; h++) {
+          let s = b1[h];
+          for (let i = 0; i < 2; i++) s += W1[h][i] * x[i];
+          hOut[h] = sigmoid(s);
+        }
+        const outs = new Array(numOut);
+        for (let o = 0; o < numOut; o++) {
+          let s = b2[o];
+          for (let h = 0; h < H; h++) s += W2[o][h] * hOut[h];
+          outs[o] = sigmoid(s);
+        }
+        const dOuts = new Array(numOut);
+        for (let o = 0; o < numOut; o++) {
+          const target = targetsList[o][n];
+          const err = target - outs[o];
+          eachLoss[o] += err * err;
+          totalLoss += err * err;
+          dOuts[o] = err * dsigmoid(outs[o]);
+        }
+        const dH = new Array(H).fill(0);
+        for (let h = 0; h < H; h++) {
+          let sum = 0;
+          for (let o = 0; o < numOut; o++) sum += dOuts[o] * W2[o][h];
+          dH[h] = sum * dsigmoid(hOut[h]);
+        }
+        for (let o = 0; o < numOut; o++) {
+          for (let h = 0; h < H; h++) W2[o][h] += lr * dOuts[o] * hOut[h];
+          b2[o] += lr * dOuts[o];
+        }
+        for (let h = 0; h < H; h++) {
+          for (let i = 0; i < 2; i++) W1[h][i] += lr * dH[h] * x[i];
+          b1[h] += lr * dH[h];
+        }
+      }
+      lossHistory.push(totalLoss / inputs.length);
+      for (let o = 0; o < numOut; o++) eachLoss[o] /= inputs.length;
+      for (let o = 0; o < numOut; o++) lossHistoryEach[o].push(eachLoss[o]);
+    }
+    await new Promise(r => setTimeout(r, 0));
+    if (onProgress) onProgress(Math.min(ep + CHUNK, EPOCHS), EPOCHS);
+    if (stopRequested) break;
+  }
+  return {W1, b1, W2, b2, H, numOut, lossHistory, lossHistoryEach};
+}
+
+function predict(net, x0, x1) {
+  const {W1, b1, W2, b2, H, numOut} = net;
+  const hOut = new Array(H);
+  for (let h = 0; h < H; h++) {
+    let s = b1[h];
+    s += W1[h][0]*x0 + W1[h][1]*x1;
+    hOut[h] = sigmoid(s);
+  }
+  const outs = new Array(numOut);
+  for (let o = 0; o < numOut; o++) {
+    let s = b2[o];
+    for (let h = 0; h < H; h++) s += W2[o][h] * hOut[h];
+    outs[o] = sigmoid(s);
+  }
+  return outs;
+}
+
+function hiddenOutput(net, h, x0, x1) {
+  let s = net.b1[h];
+  s += net.W1[h][0]*x0 + net.W1[h][1]*x1;
+  return sigmoid(s);
+}
+
+function drawGrid(net, outIdx, canvasId) {
+  const c = $(canvasId), ctx = c.getContext('2d');
+  const W = c.width, Hh = c.height;
+  const img = ctx.createImageData(W, Hh);
+  for (let py = 0; py < Hh; py++) {
+    for (let px = 0; px < W; px++) {
+      const x0 = px / (W - 1);
+      const x1 = 1 - py / (Hh - 1);
+      const out = predict(net, x0, x1)[outIdx];
+      const t = out;
+      const r = Math.round(232 + (43 - 232) * t);
+      const g = Math.round(168 + (122 - 168) * t);
+      const b = Math.round(124 + (120 - 124) * t);
+      const isBorder = Math.abs(out - 0.5) < 0.012;
+      const idx = (py * W + px) * 4;
+      if (isBorder) { img.data[idx]=60; img.data[idx+1]=60; img.data[idx+2]=60; img.data[idx+3]=255; }
+      else { img.data[idx]=r; img.data[idx+1]=g; img.data[idx+2]=b; img.data[idx+3]=255; }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function drawPoints(targets, canvasId) {
+  const c = $(canvasId), ctx = c.getContext('2d');
+  const W = c.width, Hh = c.height;
+  ctx.clearRect(0, 0, W, Hh);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, Hh);
+  ctx.strokeStyle = '#eee'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 10; i++) {
+    const t = i / 10;
+    ctx.beginPath(); ctx.moveTo(t*W, 0); ctx.lineTo(t*W, Hh); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, t*Hh); ctx.lineTo(W, t*Hh); ctx.stroke();
+  }
+  ctx.strokeStyle = '#aaa';
+  ctx.beginPath(); ctx.moveTo(0, Hh); ctx.lineTo(W, Hh); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, Hh); ctx.stroke();
+  inputs.forEach((x, i) => {
+    const px = x[0] * (W - 20) + 10;
+    const py = (1 - x[1]) * (Hh - 20) + 10;
+    ctx.beginPath();
+    ctx.arc(px, py, 14, 0, Math.PI * 2);
+    ctx.fillStyle = targets[i] === 1 ? '#1a7f37' : '#c0392b';
+    ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px Tahoma';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(`${x[0]},${x[1]}`, px, py);
+  });
+}
+
+function drawNeuronRole(canvasId, net, h) {
+  const c = $(canvasId);
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const W = c.width, Hh = c.height;
+  const img = ctx.createImageData(W, Hh);
+  for (let py = 0; py < Hh; py++) {
+    for (let px = 0; px < W; px++) {
+      const x0 = px / (W - 1);
+      const x1 = 1 - py / (Hh - 1);
+      const out = hiddenOutput(net, h, x0, x1);
+      const t = out;
+      const r = Math.round(232 + (43 - 232) * t);
+      const g = Math.round(168 + (122 - 168) * t);
+      const b = Math.round(124 + (120 - 124) * t);
+      const isBorder = Math.abs(out - 0.5) < 0.02;
+      const idx = (py * W + px) * 4;
+      if (isBorder) { img.data[idx]=60; img.data[idx+1]=60; img.data[idx+2]=60; img.data[idx+3]=255; }
+      else { img.data[idx]=r; img.data[idx+1]=g; img.data[idx+2]=b; img.data[idx+3]=255; }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function drawLossChart(history, historyEach, names, canvasId) {
+  const c = $(canvasId), ctx = c.getContext('2d');
+  const W = c.width, Hh = c.height;
+  ctx.clearRect(0, 0, W, Hh);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, Hh);
+  if (!history || history.length === 0) {
+    ctx.fillStyle = '#999'; ctx.font = '12px Tahoma'; ctx.textAlign = 'center';
+    ctx.fillText('داده‌ی loss موجود نیست', W/2, Hh/2);
+    return;
+  }
+  const step = Math.max(1, Math.floor(history.length / 200));
+  const sampled = [];
+  for (let i = 0; i < history.length; i += step) sampled.push(history[i]);
+  const sampledEach = historyEach.map(arr => {
+    const s = [];
+    for (let i = 0; i < arr.length; i += step) s.push(arr[i]);
+    return s;
+  });
+  let maxLoss = Math.max(...sampled, 0.0001);
+  sampledEach.forEach(arr => { maxLoss = Math.max(maxLoss, ...arr); });
+  ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = (i/4) * (Hh - 20) + 10;
+    ctx.beginPath(); ctx.moveTo(30, y); ctx.lineTo(W - 10, y); ctx.stroke();
+  }
+  ctx.strokeStyle = '#aaa';
+  ctx.beginPath(); ctx.moveTo(30, 10); ctx.lineTo(30, Hh - 10); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(30, Hh - 10); ctx.lineTo(W - 10, Hh - 10); ctx.stroke();
+  ctx.fillStyle = '#666'; ctx.font = '10px Tahoma'; ctx.textAlign = 'right';
+  ctx.fillText(maxLoss.toFixed(2), 28, 15);
+  ctx.fillText('0', 28, Hh - 10);
+  const colors = ['#2980b9', '#27ae60', '#8e44ad', '#e67e22'];
+  sampledEach.forEach((arr, o) => {
+    if (arr.length < 2) return;
+    ctx.strokeStyle = colors[o % colors.length]; ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    arr.forEach((v, i) => {
+      const x = 30 + (i / (arr.length - 1)) * (W - 40);
+      const y = (Hh - 10) - (v / maxLoss) * (Hh - 20);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  });
+  ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  sampled.forEach((v, i) => {
+    const x = 30 + (i / (sampled.length - 1)) * (W - 40);
+    const y = (Hh - 10) - (v / maxLoss) * (Hh - 20);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  let lx = 40, ly = Hh - 5;
+  ctx.font = '10px Tahoma'; ctx.textAlign = 'left';
+  ctx.fillStyle = '#c0392b'; ctx.fillText('مجموع', lx, ly); lx += 50;
+  names.forEach((n, o) => {
+    ctx.fillStyle = colors[o % colors.length];
+    ctx.fillText(n, lx, ly);
+    lx += 80;
+  });
+}
+
+function buildChartsArea(names) {
+  const area = $('chartsArea');
+  let html = '';
+  if (names.length === 1) {
+    html += `
+      <div class="canvasWrap">
+        <div class="panel">
+          <h3>مرز تصمیم‌گیری</h3>
+          <canvas id="grid0" width="360" height="360"></canvas>
+          <div class="legend">
+            <span style="background:#2b7a78"></span>خروجی ≈ 1
+            <span style="background:#e8a87c"></span>خروجی ≈ 0
+            <span style="background:#fff;border:1px solid #999"></span>مرز
+          </div>
+        </div>
+        <div class="panel">
+          <h3>چهار نقطه گیت</h3>
+          <canvas id="points0" width="360" height="360"></canvas>
+          <div class="legend">
+            <span style="background:#1a7f37;border-radius:50%"></span>هدف 1
+            <span style="background:#c0392b;border-radius:50%"></span>هدف 0
+          </div>
+        </div>
+        <div class="panel">
+          <h3>نمودار Loss</h3>
+          <canvas id="lossChart" width="360" height="200"></canvas>
+        </div>
+      </div>`;
+  } else {
+    html += `<div class="multiGrid">`;
+    names.forEach((name, o) => {
+      html += `
+        <div class="panel">
+          <div class="multiLabel">${name}</div>
+          <h3>مرز تصمیم‌گیری</h3>
+          <canvas id="grid${o}" width="320" height="320"></canvas>
+          <div class="legend">
+            <span style="background:#2b7a78"></span>≈1
+            <span style="background:#e8a87c"></span>≈0
+          </div>
+        </div>
+        <div class="panel">
+          <div class="multiLabel">${name}</div>
+          <h3>چهار نقطه</h3>
+          <canvas id="points${o}" width="320" height="320"></canvas>
+          <div class="legend">
+            <span style="background:#1a7f37;border-radius:50%"></span>هدف 1
+            <span style="background:#c0392b;border-radius:50%"></span>هدف 0
+          </div>
+        </div>`;
+    });
+    html += `</div>`;
+    html += `
+      <div class="panel" style="margin-top:16px;">
+        <h3>نمودار Loss (ترکیبی + تفکیکی)</h3>
+        <canvas id="lossChart" width="100%" height="220" style="width:100%; max-width:740px; margin:0 auto;"></canvas>
+      </div>`;
+  }
+  area.innerHTML = html;
+}
+
+function detectNeuronRoles(net) {
+  const H = net.H;
+  const rows = [];
+  for (let h = 0; h < H; h++) {
+    const outs = inputs.map(x => hiddenOutput(net, h, x[0], x[1]));
+    const bits = outs.map(o => o >= 0.5 ? 1 : 0);
+    rows.push({ name: `نورون مخفی ${h}`, outs, bits, role: detectRole(bits) });
+  }
+  return rows;
+}
+
+function renderRoles(net, names) {
+  const panel = $('rolesPanel');
+  const content = $('rolesContent');
+  let html = '';
+  const hiddenRows = detectNeuronRoles(net);
+  html += `<h4 style="margin-top:10px;">نورون‌های مخفی (مشترک بین همه خروجی‌ها):</h4>`;
+  html += '<table class="roles"><tr><th>نورون</th><th>خروجی‌ها</th><th>بیت‌ها</th><th>نقش</th></tr>';
+  hiddenRows.forEach(r => {
+    html += `<tr>
+      <td>${r.name}</td>
+      <td>[${r.outs.map(o => o.toFixed(2)).join(', ')}]</td>
+      <td>[${r.bits.join(', ')}]</td>
+      <td><b>${r.role}</b></td>
+    </tr>`;
+  });
+  html += '</table>';
+  names.forEach((name, o) => {
+    const outs = inputs.map(x => predict(net, x[0], x[1])[o]);
+    const bits = outs.map(v => v >= 0.5 ? 1 : 0);
+    html += `<h4 style="margin-top:14px;">خروجی ${name}:</h4>`;
+    html += '<table class="roles"><tr><th>خروجی‌ها</th><th>بیت‌ها</th><th>نقش</th></tr>';
+    html += `<tr>
+      <td>[${outs.map(v => v.toFixed(2)).join(', ')}]</td>
+      <td>[${bits.join(', ')}]</td>
+      <td><b>${detectRole(bits)}</b></td>
+    </tr></table>`;
+  });
+  if (net.numOut > 1 || net.H <= 6) {
+    html += `<h4 style="margin-top:14px;">🔗 سهم نورون‌های میانی در هر خروجی (وزن‌های W2):</h4>`;
+    html += '<table class="roles"><tr><th>نورون مخفی</th>';
+    names.forEach(n => html += `<th>${n}</th>`);
+    html += '</tr>';
+    for (let h = 0; h < net.H; h++) {
+      html += `<tr><td>نورون ${h}</td>`;
+      for (let o = 0; o < net.numOut; o++) {
+        const w = net.W2[o][h];
+        const color = w > 0 ? '#1a7f37' : '#c0392b';
+        html += `<td style="color:${color}">${w.toFixed(3)}</td>`;
+      }
+      html += '</tr>';
+    }
+    html += '</table>';
+  }
+  html += '<div class="canvasWrap" style="margin-top:12px;">';
+  for (let h = 0; h < net.H; h++) {
+    html += `<div class="roleCard">
+      <h4>نقش نورون مخفی ${h}</h4>
+      <canvas id="neuronCanvas${h}" class="neuronCanvas" width="120" height="120"></canvas>
+    </div>`;
+  }
+  html += '</div>';
+  content.innerHTML = html;
+  panel.style.display = 'block';
+  for (let h = 0; h < net.H; h++) {
+    drawNeuronRole(`neuronCanvas${h}`, net, h);
+  }
+}
+
+function updateGateHint() {
+  const gate = $('gate').value;
+  const hint = $('gateHint');
+  if (gate === 'NOT') {
+    hint.innerHTML = '🔸 <b>گیت NOT تک‌ورودی است</b> — فقط x0 مؤثر است و x1 بی‌اثر. (خطی جداپذیر)';
+  } else if (gate === 'BUFFER') {
+    hint.innerHTML = '🔸 <b>گیت BUFFER تک‌ورودی است</b> — خروجی = x0. (خطی جداپذیر)';
+  } else if (gate === 'HALF_ADDER') {
+    hint.innerHTML = '🔸 <b>نیم‌جمع‌کننده: یک شبکه با دو خروجی</b> — Sum (XOR) و Carry (AND).';
+  } else if (LINEAR_GATES.includes(gate)) {
+    hint.innerHTML = `🟢 گیت <b>${gate}</b> خطی جداپذیر است — با ۱ نورون مخفی هم حل می‌شود.`;
+  } else {
+    hint.innerHTML = `🔴 گیت <b>${gate}</b> خطی جداپذیر نیست — حداقل ۲ نورون مخفی لازم است. <b>⚠️ با ۲ نرون ممکن است یادگیری ناپایدار باشد؛ ۳ نرون توصیه می‌شود.</b>`;
+  }
+}
+
+$('hidden').oninput = () => $('hVal').textContent = $('hidden').value;
+$('lr').oninput     = () => $('lrVal').textContent = $('lr').value;
+$('epochs').oninput = () => $('epVal').textContent = $('epochs').value;
+$('gate').onchange  = updateGateHint;
+
+function showHelpPage(pageId) {
+  document.querySelectorAll('.helpPage').forEach(p => p.classList.remove('active'));
+  $(pageId).classList.add('active');
+  document.querySelector('.modalContent').scrollTop = 0;
+}
+$('helpBtn').onclick = () => { showHelpPage('helpMenu'); $('helpModal').classList.add('open'); };
+$('closeHelp').onclick = () => $('helpModal').classList.remove('open');
+$('helpModal').onclick = (e) => { if (e.target === $('helpModal')) $('helpModal').classList.remove('open'); };
+document.querySelectorAll('.helpMenuList li').forEach(li => {
+  li.onclick = () => showHelpPage('page-' + li.dataset.page);
+});
+document.querySelectorAll('[data-back]').forEach(btn => {
+  btn.onclick = () => showHelpPage('helpMenu');
+});
+$('quickWhy3').onclick = () => {
+  showHelpPage('page-why3');
+  $('helpModal').classList.add('open');
+};
+
+/* NEW: محاسبه کیفیت یادگیری */
+function computeQuality(net, targetsList) {
+  const numOut = targetsList.length;
+  let correct = 0;
+  let total = 0;
+  const details = [];
+  for (let o = 0; o < numOut; o++) {
+    let outCorrect = 0;
+    for (let i = 0; i < inputs.length; i++) {
+      const out = predict(net, inputs[i][0], inputs[i][1])[o];
+      const ok = Math.abs(out - targetsList[o][i]) < 0.3;
+      if (ok) { outCorrect++; correct++; }
+      total++;
+    }
+    details.push({ name: net.names[o], correct: outCorrect, total: inputs.length });
+  }
+  return { correct, total, pct: Math.round(100 * correct / total), details };
+}
+
+/* NEW: به‌روزرسانی نشانگرهای بصری */
+function updateStatusIndicators(net, targetsList, names) {
+  const q = computeQuality(net, targetsList);
+  const lamp = $('statusLamp');
+  const lampText = $('statusText');
+  const qWrap = $('qualityBarWrap');
+  const qPct = $('qualityPct');
+  const qFill = $('qualityBarFill');
+  const tip = $('smartTip');
+
+  lamp.classList.add('show');
+  lamp.classList.remove('good', 'bad', 'partial');
+  qWrap.classList.add('show');
+
+  // نوار کیفیت
+  qPct.textContent = q.pct + '%';
+  qFill.style.width = q.pct + '%';
+  qFill.classList.remove('good', 'partial', 'bad');
+
+  // تعیین وضعیت
+  if (q.pct === 100) {
+    lamp.classList.add('good');
+    lampText.innerHTML = `✅ عالی! شبکه همه‌ی ${q.total} حالت را درست یاد گرفت.`;
+    qFill.classList.add('good');
+    tip.classList.remove('show');
+    playSuccessSound();
+  } else if (q.pct >= 50) {
+    lamp.classList.add('partial');
+    lampText.innerHTML = `⚠️ ناقص — ${q.correct} از ${q.total} حالت درست.`;
+    qFill.classList.add('partial');
+    showSmartTip(q, names, 'partial');
+    playFailSound();
+  } else {
+    lamp.classList.add('bad');
+    lampText.innerHTML = `❌ یاد نگرفت — فقط ${q.correct} از ${q.total} حالت درست.`;
+    qFill.classList.add('bad');
+    showSmartTip(q, names, 'bad');
+    playFailSound();
+  }
+}
+
+/* NEW: نمایش پیشنهاد هوشمند */
+function showSmartTip(q, names, mode) {
+  const tip = $('smartTip');
+  tip.classList.add('show');
+  const H = lastNet ? lastNet.H : 2;
+  const gate = lastNet ? lastNet.gate : 'XOR';
+  let html = `<b>💡 پیشنهاد برای بهبود:</b><br><ul style="margin:6px 0; padding-right:20px;">`;
+  if (mode === 'bad') {
+    html += `<li>شبکه در <b>مینیمم محلی</b> گیر کرده. این یه پدیده‌ی طبیعیه، نه باگ!</li>`;
+  } else {
+    html += `<li>شبکه تقریباً یاد گرفته ولی هنوز کامل نیست.</li>`;
+  }
+  if (H <= 2 && (gate === 'XOR' || gate === 'XNOR' || gate === 'HALF_ADDER')) {
+    html += `<li>🎯 <b>نرون مخفی رو از ${H} به ${H + 1} افزایش بده</b> — با ۳ نرون یادگیری پایدارتر می‌شه.</li>`;
+  }
+  html += `<li>🎲 دکمه <b>«تصادفی جدید»</b> رو بزن و دوباره آموزش بده (seed متفاوت = وزن اولیه متفاوت).</li>`;
+  html += `<li>⚡ نرخ یادگیری (lr) رو کمی تغییر بده — مثلاً ${($('lr').value > 0.5 ? '0.3' : '0.8')}.</li>`;
+  html += `<li>🔁 تعداد دورها (epochs) رو افزایش بده.</li>`;
+  html += `</ul>`;
+  tip.innerHTML = html;
+}
+
+async function runTraining() {
+  if (isTraining) return;
+  isTraining = true;
+  stopRequested = false;
+  const gate = $('gate').value;
+  const gateData = GATES[gate];
+  const targetsList = gateData.targets;
+  const names = gateData.names;
+  const H = +$('hidden').value;
+  const lr = +$('lr').value;
+  const EPOCHS = +$('epochs').value;
+  $('run').disabled = true;
+  $('stop').disabled = false;
+  $('random').disabled = true;
+  $('load').disabled = true;
+  $('save').disabled = true;
+  $('progressWrap').style.display = 'block';
+  $('progressBar').style.width = '0%';
+  $('progressText').textContent = 'در حال آموزش...';
+  // مخفی کردن نشانگرهای قبلی
+  $('statusLamp').classList.remove('show');
+  $('qualityBarWrap').classList.remove('show');
+  $('smartTip').classList.remove('show');
+
+  buildChartsArea(names);
+  names.forEach((_, o) => drawPoints(targetsList[o], `points${o}`));
+  const startTime = performance.now();
+  const net = await trainNetwork(H, lr, EPOCHS, targetsList, (done, total) => {
+    const pct = (done / total) * 100;
+    $('progressBar').style.width = pct + '%';
+    $('progressText').textContent = `دور ${done} از ${total} (${pct.toFixed(1)}%)`;
+  });
+  lastNet = net;
+  lastNet.gate = gate;
+  lastNet.targets = targetsList;
+  lastNet.names = names;
+  const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+  names.forEach((_, o) => {
+    drawGrid(net, o, `grid${o}`);
+    drawPoints(targetsList[o], `points${o}`);
+  });
+  drawLossChart(net.lossHistory, net.lossHistoryEach, names, 'lossChart');
+  renderRoles(net, names);
+
+  // NEW: نمایش نشانگرها
+  updateStatusIndicators(net, targetsList, names);
+
+  let html = `<b>نتیجه (گیت = ${gate}، نرون مخفی = ${H}):</b><br>`;
+  let allOk = true;
+  names.forEach((name, o) => {
+    html += `<div style="margin-top:8px;"><b>${name}:</b><br>`;
+    inputs.forEach((x, i) => {
+      const out = predict(net, x[0], x[1])[o];
+      const ok = Math.abs(out - targetsList[o][i]) < 0.3;
+      if (!ok) allOk = false;
+      html += `&nbsp;&nbsp;(${x[0]},${x[1]}) = <code>${out.toFixed(4)}</code> ` +
+              (ok ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>') + '<br>';
+    });
+    html += '</div>';
+  });
+  html += `<br>⏱️ زمان آموزش: ${elapsed} ثانیه<br>`;
+  html += allOk
+    ? `<br><span class="ok">✅ شبکه همه‌ی خروجی‌ها را یاد گرفت.</span>`
+    : `<br><span class="bad">❌ شبکه همه‌ی خروجی‌ها را یاد نگرفت.</span>`;
+  $('results').innerHTML = html;
+  $('run').disabled = false;
+  $('stop').disabled = true;
+  $('random').disabled = false;
+  $('load').disabled = false;
+  $('save').disabled = false;
+  isTraining = false;
+
+  if (gate === 'XOR' && H === 2 && allOk) {
+    setTimeout(() => {
+      if (confirm('🎬 انیمیشن آموزش XOR را ببینید؟')) {
+        runAnim(net);
+      }
+    }, 600);
+  }
+}
+
+$('run').onclick = runTraining;
+$('stop').onclick = () => { stopRequested = true; $('progressText').textContent = 'در حال توقف...'; };
+$('random').onclick = () => {
+  seed = Math.floor(Math.random() * 100000);
+  $('results').innerHTML = `🎲 seed جدید: <code>${seed}</code> — دوباره آموزش بدهید.`;
+};
+
+$('save').onclick = () => {
+  if (!lastNet) { alert('اول آموزش بده!'); return; }
+  const data = {
+    W1: lastNet.W1, b1: lastNet.b1,
+    W2: lastNet.W2, b2: lastNet.b2,
+    H: lastNet.H, numOut: lastNet.numOut,
+    gate: lastNet.gate,
+    lossHistory: lastNet.lossHistory,
+    lossHistoryEach: lastNet.lossHistoryEach
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `weights_${lastNet.gate}_H${lastNet.H}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  $('results').innerHTML = '💾 وزن‌ها و نمودار loss ذخیره شد.';
+};
+
+$('load').onclick = () => $('loadFile').click();
+$('loadFile').onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      const net = { W1: data.W1, b1: data.b1, W2: data.W2, b2: data.b2, H: data.H, numOut: data.numOut };
+      lastNet = net;
+      lastNet.gate = data.gate;
+      lastNet.targets = GATES[data.gate].targets;
+      lastNet.names = GATES[data.gate].names;
+      lastNet.lossHistory = data.lossHistory || null;
+      lastNet.lossHistoryEach = data.lossHistoryEach || null;
+      $('gate').value = data.gate;
+      $('hidden').value = data.H;
+      $('hVal').textContent = data.H;
+      updateGateHint();
+      buildChartsArea(lastNet.names);
+      lastNet.names.forEach((_, o) => {
+        drawGrid(net, o, `grid${o}`);
+        drawPoints(lastNet.targets[o], `points${o}`);
+      });
+      if (lastNet.lossHistory) {
+        drawLossChart(lastNet.lossHistory, lastNet.lossHistoryEach, lastNet.names, 'lossChart');
+      }
+      renderRoles(net, lastNet.names);
+      updateStatusIndicators(net, lastNet.targets, lastNet.names);
+      let html = `<b>نتایج بارگذاری شد (گیت = ${lastNet.gate}):</b><br>`;
+      lastNet.names.forEach((name, o) => {
+        html += `<div style="margin-top:6px;"><b>${name}:</b><br>`;
+        inputs.forEach((x, i) => {
+          const out = predict(net, x[0], x[1])[o];
+          const ok = Math.abs(out - lastNet.targets[o][i]) < 0.3;
+          html += `&nbsp;&nbsp;(${x[0]},${x[1]}) = <code>${out.toFixed(4)}</code> ` +
+                  (ok ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>') + '<br>';
+        });
+        html += '</div>';
+      });
+      $('results').innerHTML = html;
+    } catch (err) {
+      alert('خطا در بارگذاری: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+};
+
+/* ========== انیمیشن ========== */
+let animState = { running: false, timeoutId: null, currentNet: null, currentStage: 0 };
+let animSpeed = 1;
+
+$('animSpeed').oninput = () => {
+  animSpeed = +$('animSpeed').value;
+  $('animSpeedVal').textContent = animSpeed + 'x';
+};
+
+function drawHiddenGrid(net, h, canvasId) {
+  const c = $(canvasId), ctx = c.getContext('2d');
+  if (!c) return;
+  const W = c.width, Hh = c.height;
+  const img = ctx.createImageData(W, Hh);
+  for (let py = 0; py < Hh; py++) {
+    for (let px = 0; px < W; px++) {
+      const x0 = px / (W - 1);
+      const x1 = 1 - py / (Hh - 1);
+      const out = hiddenOutput(net, h, x0, x1);
+      const t = out;
+      const r = Math.round(232 + (43 - 232) * t);
+      const g = Math.round(168 + (122 - 168) * t);
+      const b = Math.round(124 + (120 - 124) * t);
+      const isBorder = Math.abs(out - 0.5) < 0.025;
+      const idx = (py * W + px) * 4;
+      if (isBorder) { img.data[idx]=60; img.data[idx+1]=60; img.data[idx+2]=60; img.data[idx+3]=255; }
+      else { img.data[idx]=r; img.data[idx+1]=g; img.data[idx+2]=b; img.data[idx+3]=255; }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  drawAxesAndPoints(c, false);
+}
+
+function drawFinalGrid(net, canvasId) {
+  const c = $(canvasId), ctx = c.getContext('2d');
+  if (!c) return;
+  const W = c.width, Hh = c.height;
+  const img = ctx.createImageData(W, Hh);
+  for (let py = 0; py < Hh; py++) {
+    for (let px = 0; px < W; px++) {
+      const x0 = px / (W - 1);
+      const x1 = 1 - py / (Hh - 1);
+      const out = predict(net, x0, x1)[0];
+      const t = out;
+      const r = Math.round(232 + (43 - 232) * t);
+      const g = Math.round(168 + (122 - 168) * t);
+      const b = Math.round(124 + (120 - 124) * t);
+      const isBorder = Math.abs(out - 0.5) < 0.012;
+      const idx = (py * W + px) * 4;
+      if (isBorder) { img.data[idx]=60; img.data[idx+1]=60; img.data[idx+2]=60; img.data[idx+3]=255; }
+      else { img.data[idx]=r; img.data[idx+1]=g; img.data[idx+2]=b; img.data[idx+3]=255; }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  drawAxesAndPoints(c, true);
+}
+
+function drawAxesAndPoints(c, showXorPoints) {
+  const ctx = c.getContext('2d');
+  const W = c.width, Hh = c.height;
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, Hh); ctx.lineTo(W, Hh); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, Hh); ctx.stroke();
+  if (showXorPoints) {
+    inputs.forEach((x) => {
+      const px = x[0] * (W - 20) + 10;
+      const py = (1 - x[1]) * (Hh - 20) + 10;
+      ctx.beginPath();
+      ctx.arc(px, py, 11, 0, Math.PI * 2);
+      ctx.fillStyle = (x[0] !== x[1]) ? '#1a7f37' : '#c0392b';
+      ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 10px Tahoma';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(`${x[0]},${x[1]}`, px, py);
+    });
+  }
+}
+
+function clearCanvas(canvasId) {
+  const c = $(canvasId);
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.fillStyle = '#fafafa'; ctx.fillRect(0, 0, c.width, c.height);
+  ctx.fillStyle = '#ccc'; ctx.font = '12px Tahoma';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('در انتظار...', c.width/2, c.height/2);
+}
+
+function setActiveDot(stage) {
+  document.querySelectorAll('#animStageDots .dot').forEach(d => {
+    d.classList.remove('active');
+    if (+d.dataset.stage < stage) d.classList.add('done');
+    else d.classList.remove('done');
+  });
+  const active = document.querySelector(`#animStageDots .dot[data-stage="${stage}"]`);
+  if (active) active.classList.add('active');
+}
+
+const ANIM_STAGES = [
+  {
+    title: 'مرحله ۱: نورون مخفی اول — h1 = OR(x1,x2)',
+    desc: 'این نورون فقط یک <b>نیم‌صفحه</b> می‌سازد. مرز تصمیم‌گیری‌اش یک خط راست است. سه نقطه با OR=1 و یک نقطه با OR=0.',
+    formula: 'h1 = σ(w1·x1 + w2·x2 + b)  →  OR',
+    show: (net) => {
+      drawHiddenGrid(net, 0, 'animCanvas1');
+      clearCanvas('animCanvas2');
+      clearCanvas('animCanvasOut');
+    }
+  },
+  {
+    title: 'مرحله ۲: نورون مخفی دوم — h2 = AND(x1,x2)',
+    desc: 'نورون دوم هم یک <b>نیم‌صفحه</b> دیگر می‌سازد. این بار فقط نقطه (1,1) در سمت AND=1 قرار می‌گیرد.',
+    formula: 'h2 = σ(w1·x1 + w2·x2 + b)  →  AND',
+    show: (net) => {
+      drawHiddenGrid(net, 0, 'animCanvas1');
+      drawHiddenGrid(net, 1, 'animCanvas2');
+      clearCanvas('animCanvasOut');
+    }
+  },
+  {
+    title: 'مرحله ۳: ترکیب خطی — w1·h1 + w2·h2 + b',
+    desc: 'لایه خروجی، خروجی دو نورون مخفی را با وزن ترکیب می‌کند. این ترکیب قبل از فعال‌سازی، یک <b>خط جداکننده</b> در فضای ویژگی‌هاست.',
+    formula: 'z = W2[0]·h1 + W2[1]·h2 + b2',
+    show: (net) => {
+      drawHiddenGrid(net, 0, 'animCanvas1');
+      drawHiddenGrid(net, 1, 'animCanvas2');
+      drawPartialFinalGrid(net, 'animCanvasOut');
+    }
+  },
+  {
+    title: 'مرحله ۴: خروجی نهایی — XOR کامل! 🎉',
+    desc: 'بعد از عبور از تابع فعال‌سازی (sigmoid)، مرز تصمیم‌گیری <b>غیرخطی</b> می‌شود. نقاط (0,1) و (1,0) سبز (خروجی 1) و نقاط (0,0) و (1,1) قرمز (خروجی 0).',
+    formula: 'out = σ(W2[0]·h1 + W2[1]·h2 + b2)  →  XOR',
+    show: (net) => {
+      drawHiddenGrid(net, 0, 'animCanvas1');
+      drawHiddenGrid(net, 1, 'animCanvas2');
+      drawFinalGrid(net, 'animCanvasOut');
+    }
+  }
+];
+
+function drawPartialFinalGrid(net, canvasId) {
+  const c = $(canvasId), ctx = c.getContext('2d');
+  if (!c) return;
+  const W = c.width, Hh = c.height;
+  const img = ctx.createImageData(W, Hh);
+  for (let py = 0; py < Hh; py++) {
+    for (let px = 0; px < W; px++) {
+      const x0 = px / (W - 1);
+      const x1 = 1 - py / (Hh - 1);
+      const hOut = [hiddenOutput(net, 0, x0, x1), hiddenOutput(net, 1, x0, x1)];
+      let z = net.b2[0];
+      for (let h = 0; h < 2; h++) z += net.W2[0][h] * hOut[h];
+      const t = sigmoid(z);
+      const r = Math.round(232 + (43 - 232) * t);
+      const g = Math.round(168 + (122 - 168) * t);
+      const b = Math.round(124 + (120 - 124) * t);
+      const isBorder = Math.abs(z) < 0.08;
+      const idx = (py * W + px) * 4;
+      if (isBorder) { img.data[idx]=108; img.data[idx+1]=92; img.data[idx+2]=231; img.data[idx+3]=255; }
+      else { img.data[idx]=r; img.data[idx+1]=g; img.data[idx+2]=b; img.data[idx+3]=255; }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  drawAxesAndPoints(c, false);
+}
+
+function stopAnim() {
+  animState.running = false;
+  if (animState.timeoutId) {
+    clearTimeout(animState.timeoutId);
+    animState.timeoutId = null;
+  }
+}
+
+function playStage(stageNum) {
+  if (!animState.running || !animState.currentNet) return;
+  if (stageNum > 4) {
+    animState.running = false;
+    $('animProgressBar').style.width = '100%';
+    setActiveDot(4);
+    return;
+  }
+  animState.currentStage = stageNum;
+  const stage = ANIM_STAGES[stageNum - 1];
+  setActiveDot(stageNum);
+  $('animProgressBar').style.width = (stageNum / 4 * 100) + '%';
+  const info = $('animStageInfo');
+  info.innerHTML = `
+    <div class="stageTitle">${stage.title}</div>
+    <div class="stageDesc">${stage.desc}</div>
+    <div class="stageFormula">${stage.formula}</div>
+  `;
+  stage.show(animState.currentNet);
+  playBeep(500 + stageNum * 100, 0.1);
+  const baseDelay = stageNum === 4 ? 2800 : 2400;
+  const delay = baseDelay / animSpeed;
+  animState.timeoutId = setTimeout(() => playStage(stageNum + 1), delay);
+}
+
+function runAnim(net) {
+  if (!net || net.H < 2) {
+    alert('برای انیمیشن XOR حداقل به ۲ نورون مخفی نیاز است.');
+    return;
+  }
+  stopAnim();
+  $('animPanel').classList.add('active');
+  animState.running = true;
+  animState.currentNet = net;
+  animState.currentStage = 0;
+  $('animProgressBar').style.width = '0%';
+  $('animPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => playStage(1), 400);
+}
+
+$('animReplay').onclick = () => {
+  if (!animState.currentNet) {
+    alert('اول باید شبکه آموزش ببیند. یه بار «آموزش و رسم» رو بزن.');
+    return;
+  }
+  stopAnim();
+  animState.running = true;
+  animState.currentStage = 0;
+  $('animProgressBar').style.width = '0%';
+  clearCanvas('animCanvas1');
+  clearCanvas('animCanvas2');
+  clearCanvas('animCanvasOut');
+  setTimeout(() => playStage(1), 300);
+};
+
+$('animSkip').onclick = () => {
+  stopAnim();
+  if (animState.currentNet) playStageFinal(animState.currentNet);
+};
+
+$('animClose').onclick = () => {
+  stopAnim();
+  $('animPanel').classList.remove('active');
+};
+
+function playStageFinal(net) {
+  animState.currentStage = 4;
+  setActiveDot(4);
+  $('animProgressBar').style.width = '100%';
+  const stage = ANIM_STAGES[3];
+  const info = $('animStageInfo');
+  info.innerHTML = `
+    <div class="stageTitle">${stage.title}</div>
+    <div class="stageDesc">${stage.desc}</div>
+    <div class="stageFormula">${stage.formula}</div>
+  `;
+  stage.show(net);
+}
+
+window.closeHelpAndRunAnim = function(hiddenCount) {
+  $('helpModal').classList.remove('open');
+  $('gate').value = 'XOR';
+  $('hidden').value = hiddenCount;
+  $('hVal').textContent = hiddenCount;
+  updateGateHint();
+  runTraining().then(() => {
+    if (hiddenCount === 2 && lastNet) {
+      const q = computeQuality(lastNet, lastNet.targets);
+      if (q.pct === 100) runAnim(lastNet);
+    }
+  });
+};
+
+updateGateHint();
+runTraining();
+</script>
+</body>
+</html>
